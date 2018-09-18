@@ -260,7 +260,8 @@ final class ProtoToGql {
 
   /** Returns the GraphQL name of the supplied proto. */
   static String getReferenceName(GenericDescriptor descriptor) {
-    return CharMatcher.anyOf(".").replaceFrom(descriptor.getFullName(), "_");
+    return descriptor.getName();
+//    return CharMatcher.anyOf(".").replaceFrom(descriptor.getFullName(), "_");
   }
 
   /** Returns a reference to the GraphQL type corresponding to the supplied proto. */

@@ -15,7 +15,10 @@
 package com.google.api.graphql.examples.helloworld.graphqlserver;
 
 import com.google.api.graphql.rejoiner.Query;
+import com.google.api.graphql.rejoiner.SchemaModification;
 import com.google.api.graphql.rejoiner.SchemaModule;
+import com.google.api.graphql.rejoiner.Type;
+import com.google.api.graphql.rejoiner.TypeModification;
 import io.grpc.examples.helloworld.GreeterGrpc;
 import io.grpc.examples.helloworld.HelloReply;
 import io.grpc.examples.helloworld.HelloRequest;
@@ -26,4 +29,8 @@ final class HelloWorldSchemaModule extends SchemaModule {
   HelloReply sayHello(HelloRequest request, GreeterGrpc.GreeterBlockingStub client) {
     return client.sayHello(request);
   }
+
+  @SchemaModification
+  TypeModification renameHelloReply =
+    Type.find(HelloReply.getDescriptor()).renameType("HelloWorld");
 }

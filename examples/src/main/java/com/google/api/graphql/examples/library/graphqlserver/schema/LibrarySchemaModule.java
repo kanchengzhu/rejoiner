@@ -18,6 +18,8 @@ import com.google.api.graphql.rejoiner.Arg;
 import com.google.api.graphql.rejoiner.Mutation;
 import com.google.api.graphql.rejoiner.SchemaModification;
 import com.google.api.graphql.rejoiner.SchemaModule;
+import com.google.api.graphql.rejoiner.Type;
+import com.google.api.graphql.rejoiner.TypeModification;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.example.library.book.v1.Book;
 import com.google.example.library.book.v1.BookServiceGrpc;
@@ -26,6 +28,7 @@ import com.google.example.library.shelf.v1.GetShelfRequest;
 import com.google.example.library.shelf.v1.Shelf;
 import com.google.example.library.shelf.v1.ShelfServiceGrpc;
 import graphql.schema.DataFetchingEnvironment;
+import io.grpc.examples.graphql.HelloReply;
 import net.javacrumbs.futureconverter.java8guava.FutureConverter;
 import org.dataloader.DataLoaderRegistry;
 

@@ -24,6 +24,7 @@ import graphql.relay.Relay;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
+import graphql.schema.GraphQLTypeReference;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -62,8 +63,27 @@ public final class SchemaProviderModule extends AbstractModule {
               .stream()
               .collect(Collectors.toMap(e -> e.getClassName(), Function.identity()));
 
+      Map<String, String> oldNameToNewNameMapping = modifications.stream()
+        .filter(mod -> mod instanceof Type.RenameType)
+        .map(mod -> (Type.RenameType) mod)
+        .collect(Collectors.toMap(mod -> mod.getTypeName(), mod -> mod.getNewTypeName()));
+      Set<GraphQLFieldDefinition> renamedQueryFields = queryFields.stream().map(fd -> {
+        if (fd.getType() instanceof GraphQLTypeReference) {
+          String name = fd.getType().getName();
+          // found in new name old name mapping
+          if (oldNameToNewNameMapping.containsKey(name)) {
+            String newName = oldNameToNewNameMapping.get(name);
+            return GraphQLFieldDefinition.newFieldDefinition(fd).type(new GraphQLTypeReference(newName)).build();
+          } else {
+            return fd;
+          }
+        } else {
+          return fd;
+        }
+      }).collect(Collectors.toSet());
+
       GraphQLObjectType.Builder queryType =
-          newObject().name("QueryType").fields(Lists.newArrayList(queryFields));
+          newObject().name("QueryType").fields(Lists.newArrayList(renamedQueryFields));
 
       ProtoRegistry protoRegistry =
           ProtoRegistry.newBuilder().addAll(fileDescriptors).add(modifications).build();

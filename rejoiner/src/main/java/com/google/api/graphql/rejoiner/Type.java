@@ -21,6 +21,7 @@ import com.google.protobuf.Descriptors.GenericDescriptor;
 import graphql.AssertException;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLObjectType;
+import javax.annotation.Nullable;
 
 /** Modifies a GraphQL schema by adding, removing, and replacing fields on a type. */
 public final class Type {
@@ -69,6 +70,10 @@ public final class Type {
     /** Returns a TypeModification that will replace the specified field. */
     public TypeModification replaceField(GraphQLFieldDefinition field) {
       return new ReplaceField(typeName, field);
+    }
+
+    public TypeModification renameType(String newTypeName) {
+      return new RenameType(typeName, newTypeName);
     }
   }
 
@@ -191,6 +196,29 @@ public final class Type {
           .description(input.getDescription())
           .fields(remainingFields.build())
           .build();
+    }
+  }
+
+  static class RenameType extends AbstractTypeModification {
+
+    private final String newTypeName;
+
+    RenameType(String typeName, String newTypeName) {
+      super(typeName);
+      this.newTypeName = newTypeName;
+    }
+
+    public String getNewTypeName() {
+      return newTypeName;
+    }
+
+    @Override
+    public GraphQLObjectType apply(GraphQLObjectType input) {
+      return newObject()
+        .name(newTypeName)
+        .description(input.getDescription())
+        .fields(input.getFieldDefinitions())
+        .build();
     }
   }
 }

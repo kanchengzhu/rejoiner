@@ -138,6 +138,7 @@ final class GqlInputConverter {
 
   static String getReferenceName(GenericDescriptor descriptor) {
     return "Input_" + ProtoToGql.getReferenceName(descriptor);
+//    return ProtoToGql.getReferenceName(descriptor);
   }
 
   private GraphQLType getFieldType(FieldDescriptor field) {
