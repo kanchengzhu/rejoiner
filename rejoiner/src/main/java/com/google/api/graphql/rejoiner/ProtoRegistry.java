@@ -23,15 +23,18 @@ import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import graphql.relay.Relay;
+import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLInterfaceType;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLType;
+import graphql.schema.GraphQLTypeReference;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -136,9 +139,14 @@ final class ProtoRegistry {
                     return (GraphQLObjectType) mapping.get(resolvedGlobalId.getType());
                   });
 
+      Map<String, String> oldNameToNewNameMapping = typeModifications.stream()
+        .filter(mod -> mod instanceof Type.RenameType)
+        .map(mod -> (Type.RenameType) mod)
+        .collect(Collectors.toMap(mod -> mod.getTypeName(), mod -> mod.getNewTypeName()));
+
       mapping.putAll(
           modifyTypes(
-              getMap(fileDescriptors, descriptors, enumDescriptors, nodeInterface),
+              getMap(fileDescriptors, descriptors, enumDescriptors, nodeInterface, oldNameToNewNameMapping),
               modificationsMap));
 
       return new ProtoRegistry(mapping, nodeInterface);
@@ -148,7 +156,8 @@ final class ProtoRegistry {
         List<FileDescriptor> fileDescriptors,
         List<Descriptor> descriptors,
         List<EnumDescriptor> enumDescriptors,
-        GraphQLInterfaceType nodeInterface) {
+        GraphQLInterfaceType nodeInterface,
+        Map<String, String> oldNameToNewNameMapping) {
       HashBiMap<String, GraphQLType> mapping = HashBiMap.create(getEnumMap(enumDescriptors));
       LinkedList<Descriptor> loop = new LinkedList<>(descriptors);
 
@@ -164,7 +173,7 @@ final class ProtoRegistry {
         if (!mapping.containsKey(descriptor.getFullName())) {
           mapping.put(
               ProtoToGql.getReferenceName(descriptor),
-              ProtoToGql.convert(descriptor, nodeInterface));
+              ProtoToGql.convert(descriptor, nodeInterface, oldNameToNewNameMapping));
           GqlInputConverter inputConverter =
               GqlInputConverter.newBuilder().add(descriptor.getFile()).build();
           mapping.put(

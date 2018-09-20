@@ -85,7 +85,7 @@ final class ProtoToGql {
   private static final ImmutableList<GraphQLFieldDefinition> STATIC_FIELD =
       ImmutableList.of(newFieldDefinition().type(GraphQLString).name("_").staticValue("-").build());
 
-  private static class FieldConverter implements Function<FieldDescriptor, GraphQLFieldDefinition> {
+  private static class FieldConverter {
 
     private static class ProtoDataFetcher implements DataFetcher {
 
@@ -145,13 +145,12 @@ final class ProtoToGql {
       }
     }
 
-    @Override
-    public GraphQLFieldDefinition apply(FieldDescriptor fieldDescriptor) {
+    public GraphQLFieldDefinition apply(FieldDescriptor fieldDescriptor, Map<String, String> oldNameToNewNameMapping) {
       String fieldName = fieldDescriptor.getName();
       String convertedFieldName = fieldName.contains("_") ? UNDERSCORE_TO_CAMEL.convert(fieldName) : fieldName;
       GraphQLFieldDefinition.Builder builder =
           GraphQLFieldDefinition.newFieldDefinition()
-              .type(convertType(fieldDescriptor))
+              .type(convertType(fieldDescriptor, oldNameToNewNameMapping))
               .dataFetcher(
                   new ProtoDataFetcher(convertedFieldName))
               .name(convertedFieldName);
@@ -198,9 +197,38 @@ final class ProtoToGql {
     }
   }
 
-  static GraphQLObjectType convert(Descriptor descriptor, GraphQLInterfaceType nodeInterface) {
+  static GraphQLOutputType convertType(FieldDescriptor fieldDescriptor, Map<String, String> oldNameToNewNameMapping) {
+    GraphQLOutputType type;
+
+    if (fieldDescriptor.getType() == Type.MESSAGE) {
+      type = getReference(fieldDescriptor.getMessageType());
+      if (oldNameToNewNameMapping.containsKey(type.getName())) {
+        type = new GraphQLTypeReference(oldNameToNewNameMapping.get(type.getName()));
+      }
+    } else if (fieldDescriptor.getType() == Type.GROUP) {
+      type = getReference(fieldDescriptor.getMessageType());
+    } else if (fieldDescriptor.getType() == Type.ENUM) {
+      type = getReference(fieldDescriptor.getEnumType());
+    } else {
+      type = TYPE_MAP.get(fieldDescriptor.getType());
+    }
+
+    if (type == null) {
+      throw new RuntimeException("Unknown type: " + fieldDescriptor.getType());
+    }
+
+    if (fieldDescriptor.isRepeated()) {
+      return new GraphQLList(type);
+    } else {
+      return type;
+    }
+  }
+
+  static GraphQLObjectType convert(Descriptor descriptor, GraphQLInterfaceType nodeInterface, Map<String, String> oldNameToNewNameMapping) {
     ImmutableList<GraphQLFieldDefinition> graphQLFieldDefinitions =
-        descriptor.getFields().stream().map(FIELD_CONVERTER).collect(toImmutableList());
+        descriptor.getFields().stream().map(f ->
+          FIELD_CONVERTER.apply(f, oldNameToNewNameMapping)
+        ).collect(toImmutableList());
 
     Optional<GraphQLFieldDefinition> relayId =
         descriptor
